@@ -9,30 +9,25 @@ class SimpleQA:
         self.model = AutoModelForQuestionAnswering.from_pretrained(self.model_name)
     
     def get_answer(self, question, context):
-        # Tokenize input
+        # Tokenize input with modified parameters
         inputs = self.tokenizer(
             question,
             context,
             return_tensors="pt",
             max_length=512,
             truncation=True,
-            stride=128,
-            return_overflowing_tokens=True,
             padding=True
         )
         
         # Get model output
-        outputs = self.model(**inputs)
+        outputs = self.model(**{k: v for k, v in inputs.items() if k in ['input_ids', 'attention_mask']})
         
         # Get answer span
         answer_start = torch.argmax(outputs.start_logits)
         answer_end = torch.argmax(outputs.end_logits)
         
         # Convert tokens to answer string
-        answer = self.tokenizer.convert_tokens_to_string(
-            self.tokenizer.convert_ids_to_tokens(
-                inputs["input_ids"][0][answer_start:answer_end+1]
-            )
-        )
+        tokens = inputs["input_ids"][0][answer_start:answer_end+1]
+        answer = self.tokenizer.decode(tokens, skip_special_tokens=True)
         
         return answer 
